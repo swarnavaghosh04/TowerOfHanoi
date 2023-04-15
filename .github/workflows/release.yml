@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+jobs:
+  ubuntu-test:
+    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
+    # You can convert this to a matrix build if you need cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+    - name: Download Dependencies
+      run: |
+        sudo apt update
+        sudo apt install cmake rpm
+    - name: Build
+      run: |
+        mkdir build && cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+        cmake --build .
+    - name: Create DEB and RPM Packages
+      working-directory: ${{github.workspace}}/build
+      run: |
+        cpack -G DEB
+        cpack -G RPM
+        cpack -G TGZ
+    - name: Create ArchLinux Package
+      id: makepkg
+      uses: edlanglois/pkgbuild-action@v1
+      with:
+        pkgdir: build
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: test # ${{ github.ref }}
+        release_name: Release test # ${{ github.ref }}
+        body: |
+          Changes in this Release
+          - First Change
+          - Second Change
+        draft: false
+        prerelease: false
+    - name: Upload Release Asset - Debian
+      working-directory: ${{github.workspace}}/build
+      id: upload-release-asset-debian
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./*.deb
+        asset_name: "*.deb"
+        asset_content_type: application/zip
+    - name: Upload Release Asset - RPM
+      working-directory: ${{github.workspace}}/build
+      id: upload-release-asset-rpm
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./*.rpm
+        asset_name: "*.rpm"
+    - name: Upload Release Asset - ArchLinux
+      id: upload-release-asset-archlinux
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ${{ steps.makepkg.outputs.pkgfile0 }}
+        asset_name: archlinux.pkg.tar.zst

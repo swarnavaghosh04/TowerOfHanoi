@@ -1,0 +1,22 @@
+# Maintainer: @CPACK_PACKAGE_CONTACT@
+
+pkgname=@PROJECT_NAME@
+pkgver=@PROJECT_VERSION@
+pkgrel=1
+pkgdesc="@PROJECT_DESCRIPTION@"
+url=@PROJECT_HOMEPAGE_URL@
+arch=('any')
+license=('MIT')
+depends=()
+makedepends=('cmake')
+source=("$pkgname-$pkgver-Linux.tar.gz") # "git+${url}.git"
+md5sums=('SKIP')
+build(){
+  cd "$srcdir"
+}
+package() {
+  cd "$srcdir"
+  tar -xf "$pkgname-$pkgver-Linux.tar.gz" -C "$pkgdir"
+  cd "$pkgdir"
+  mv "$pkgname-$pkgver-Linux" "usr"
+}
